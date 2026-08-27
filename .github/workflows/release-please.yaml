@@ -1,0 +1,64 @@
+# Release Please pipeline
+# Refreshes a pull request that updates the changelog & bumps the Semantic Version every
+# time the `main` branch is merged to.
+#
+# N.B. conventional commits (as enforced by the relevant git hook) are a prerequisite for
+# Release Please to generate changelogs and calculate new SemVer tags.
+#
+# IMPORTANT!
+# The following click-ops step must be taken to allow Release Please to make changes to
+# the `UptimeMonitor` repo.
+# 1. Create a Personal Access Token (PAT) with the following permissions:
+#    ```text
+#    contents: read & write
+#    metadata: read
+#    pull-requests: read & write
+#    ```
+# 2. Use the PAT to populate a GitHub Actions secret called `UPTIMEMONITOR_RELEASE_PLEASE_TOKEN`
+#    (under `github.com/albertomh/UptimeMonitor/settings/secrets/actions`).
+
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-26.04
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.UPTIMEMONITOR_RELEASE_PLEASE_TOKEN }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+      # Update pnpm-lock.yaml only if release-please created or updated a Pull Request.
+      # Otherwise the 'checkout' step fails because the 'release-...' branch does not exist.
+      # Avoids attempting a pnpm-lock.yaml update immediately after a release-please PR is merged.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        with:
+          ref: release-please--branches--main
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        with:
+          run_install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile=false
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        shell: bash
+      - uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        with:
+          file_pattern: 'pnpm-lock.yaml'
+          commit_message: 'chore: update pnpm-lock.yaml with new version from release-please'

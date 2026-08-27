@@ -1,0 +1,17 @@
+{
+    "name": "uptime-monitor",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "wrangler dev --local --host index.ts --test-scheduled",
+        "deploy": "wrangler deploy index.ts",
+        "build": "esbuild index.ts --bundle --outfile=dist/index.js --platform=browser --format=esm --minify --loader:.txt=text",
+        "types": "wrangler types"
+    },
+    "devDependencies": {
+        "esbuild": "^0.28.2",
+        "typescript": "^7.0.2",
+        "wrangler": "^4.127.0"
+    },
+    "packageManager": "pnpm@11.24.0"
+}

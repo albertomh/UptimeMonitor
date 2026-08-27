@@ -1,0 +1,13 @@
+{
+    "name": "myproject-uptime",
+    "main": "index.ts",
+    "compatibility_date": "2024-04-01",
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "myproject-uptime",
+            // local only. OpentTofu manages remote deployments.
+            "database_id": "00000000-0000-0000-0000-000000000000"
+        }
+    ]
+}

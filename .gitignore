@@ -1,0 +1,25 @@
+# dotenv
+.env
+.env.*
+!.env.example
+
+# SQLite
+*.sqlite3
+
+# IDE settings
+.vscode/
+.idea/
+
+*.DS_Store
+*tar.gz
+
+# OpenTofu / Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.plan
+*.vars
+*.tfvars
+
+node_modules/
+.wrangler/

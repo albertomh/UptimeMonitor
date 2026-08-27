@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "lib": ["ESNext", "WebWorker"],
+        "strict": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "types": []
+    },
+    "include": ["./**/*.ts", "./worker-configuration.d.ts"]
+}

@@ -22,3 +22,13 @@ Then test locally:
 
 - `http://localhost:8787/`
 - `http://localhost:8787/__scheduled?cron=*+*+*+*+*`
+
+## Run tests
+
+Run tests locally with:
+
+```sh
+pnpm test
+```
+
+These also run in CI for every branch and merge commit.

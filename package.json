@@ -2,8 +2,10 @@
     "name": "uptime-monitor",
     "version": "0.0.0",
     "private": true,
+    "type": "module",
     "scripts": {
         "dev": "wrangler dev --local --host index.ts --test-scheduled",
+        "test": "vitest run",
         "deploy": "wrangler deploy index.ts",
         "build": "esbuild index.ts --bundle --outfile=dist/index.js --platform=browser --format=esm --minify --loader:.txt=text",
         "d1:local:init": "wrangler d1 execute DB --local --file=schema.sql",
@@ -12,8 +14,10 @@
         "types": "wrangler types"
     },
     "devDependencies": {
+        "@cloudflare/vitest-pool-workers": "^0.22.0",
         "esbuild": "^0.28.2",
         "typescript": "^7.0.2",
+        "vitest": "^4.1.11",
         "wrangler": "^4.127.0"
     },
     "packageManager": "pnpm@11.24.0"

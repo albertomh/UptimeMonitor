@@ -84,6 +84,19 @@ async function saveResult(
         .run();
 }
 
+async function cleanUpOldEntries(
+    db: D1Database,
+    daysToKeep = 30,
+): Promise<void> {
+    const cutoffDate = new Date(
+        Date.now() - daysToKeep * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    await db
+        .prepare("DELETE FROM healthcheck WHERE timestamp < ?")
+        .bind(cutoffDate)
+        .run();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Targets
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,6 +216,10 @@ async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
             await saveResult(env.DB, result);
         }),
     );
+
+    if (Math.random() < 0.01) {
+        await cleanUpOldEntries(env.DB);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -6,6 +6,11 @@ interface DbHealthCheck {
     id: number;
     timestamp: string;
     project_env: string;
+    target_url: string;
+    status_code: number;
+    latency_ms: number;
+    response_body: string;
+    is_healthy: number; // 0 | 1
 }
 
 export interface Env {

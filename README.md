@@ -1,4 +1,6 @@
-# UptimeMonitor
+<!-- markdownlint-disable MD041 first-line-heading/first-line-h1 -->
+
+![UptimeMonitor logo: pixel art of an ECG-like monitor showing a heart](./docs/UptimeMonitor.png)
 
 A serverless uptime monitoring tool, for deployment on Cloudflare Workers.
 

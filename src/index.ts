@@ -40,6 +40,7 @@ export interface Env {
 
 export interface Env {
     DB: D1Database;
+    TARGETS_JSON: string;
     // human-readable project name for emails/dashboard; injected by OpenTofu
     PROJECT_DISPLAY_NAME: string;
 }
@@ -238,6 +239,72 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     const selectedEnv = envs.includes(envFilter ?? "") ? envFilter! : envs[0];
     if (!selectedEnv) return new Response("No data yet", { status: 200 });
 
+    const [{ results }, statsRow] = await Promise.all([
+        // LIMIT is 1000 to ensure we cover the 'last 12h' window
+        env.DB.prepare(
+            `SELECT * FROM healthcheck WHERE project_env = ? ORDER BY timestamp DESC LIMIT 1000`,
+        )
+            .bind(selectedEnv)
+            .all<DbHealthCheck>(),
+
+        env.DB.prepare(
+            `SELECT COUNT(*) as total, MIN(timestamp) as earliest FROM healthcheck WHERE project_env = ?`,
+        )
+            .bind(selectedEnv)
+            .first<{ total: number; earliest: string }>(),
+    ]);
+
+    const totalCount = statsRow?.total ?? 0;
+    const earliestTs = statsRow?.earliest
+        ? statsRow.earliest.replace("T", " ").slice(0, 19)
+        : "—";
+
+    const lastTransitionRow = await env.DB.prepare(
+        `SELECT timestamp, is_healthy FROM healthcheck
+        WHERE project_env = ?
+        AND is_healthy != (
+            SELECT is_healthy FROM healthcheck
+            WHERE project_env = ?
+            ORDER BY timestamp DESC LIMIT 1
+        )
+        ORDER BY timestamp DESC LIMIT 1`,
+    )
+        .bind(selectedEnv, selectedEnv)
+        .first<{ timestamp: string; is_healthy: number }>();
+
+    const lastTransition = lastTransitionRow
+        ? `${lastTransitionRow.timestamp.replace("T", " ").slice(0, 19)} UTC (${Math.floor((Date.now() - new Date(lastTransitionRow?.timestamp ?? Date.now()).getTime()) / 86400000)} days ago)`
+        : "no transitions recorded";
+
+    const staleRows = await env.DB.prepare(
+        `SELECT project_env, MAX(timestamp) as last_check
+        FROM healthcheck
+        GROUP BY project_env`,
+    ).all<{ project_env: string; last_check: string }>();
+
+    // An env is stale when its last check is older than 2.5x its own cadence —
+    // a fixed threshold would permanently flag any env checked less often than it.
+    const staleThresholdMs = new Map<string, number>();
+    try {
+        const parsed: unknown = JSON.parse(env.TARGETS_JSON);
+        if (Array.isArray(parsed)) {
+            for (const t of parsed.filter(isMonitorTarget)) {
+                const interval = parseCronMinuteInterval(t.cron) ?? 5;
+                staleThresholdMs.set(t.project_env, interval * 2.5 * 60 * 1000);
+            }
+        }
+    } catch {
+        // unparsable TARGETS_JSON: fall through to the default threshold below
+    }
+
+    const staleEnvs = staleRows.results
+        .filter(
+            (r) =>
+                Date.now() - new Date(r.last_check).getTime() >
+                (staleThresholdMs.get(r.project_env) ?? 5 * 60 * 1000),
+        )
+        .map((r) => r.project_env.toUpperCase());
+
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -245,6 +312,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${displayName(env)} status · ${selectedEnv.toUpperCase()}</title>
+    <script src="/vendor/chart.js"></script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       :root {
@@ -259,13 +327,153 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       header[data-nonlive] { background: #ecca3d; border-bottom-color: #af921a; }
       header[data-nonlive] .logo { color: #000; }
       .logo { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+      .env-toggle { margin-left: auto; display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+      .env-toggle a { padding: 0.2rem 0.6rem; font-size: 11px; font-family: var(--font); font-weight: 700; letter-spacing: 0.08em; text-decoration: none; color: var(--muted); background: var(--bg); border-right: 1px solid var(--border); transition: background 0.1s, color 0.1s; }
+      .env-toggle a:last-child { border-right: none; }
+      .env-toggle a:hover { background: var(--surface); color: var(--text); }
+      .env-toggle a.active { background: var(--surface); color: var(--text); }
+      .stale-warning-banner { background: var(--down); color: #fff; font-family: var(--font); font-size: 11px; font-weight: 700; padding: 0.4rem 1rem; letter-spacing: 0.05em; }
+      .summary { display: flex; gap: 2px; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); align-items: center; }
+      .summary-stat { margin-left: 1.5rem; color: var(--muted); }
+      .summary-stat span { color: var(--text); }
+      #lastTransition { padding-top: 0; }
+      #lastTransition span { margin: 0; }
+      .pill { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 2px; }
+      .pill-up   { background: color-mix(in srgb, var(--up)   20%, transparent); color: var(--up); }
+      .pill-down { background: color-mix(in srgb, var(--down) 20%, transparent); color: var(--down); }
+      .blocks-wrap { padding: 0.75rem 1rem 0; overflow: hidden; }
+      .blocks { display: flex; gap: 3px; overflow: hidden; }
+      .block { flex: 0 0 14px; width: 14px; height: 28px; border-radius: 2px; cursor: default; }
+      .block-up   { background: var(--up);   opacity: 0.75; }
+      .block-down { background: var(--down); opacity: 0.9; }
+      .block:hover, .block.active { opacity: 1; }
+      .block-tooltip { height: 1.6rem; display: flex; align-items: center; padding: 0.2rem 0; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .charts { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+      .chart-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+      .table-wrap { overflow-x: auto; padding: 0 1rem 1rem; }
+      table { width: 100%; border-collapse: collapse; }
+      thead th { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
+      tbody tr { border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
+      tbody tr:hover { background: var(--surface); }
+      td { padding: 0.35rem 0.5rem; white-space: nowrap; color: var(--muted); }
+      td.ts   { color: var(--text); font-variant-numeric: tabular-nums; }
+      td.env  { color: var(--accent); }
+      td.lat  { font-variant-numeric: tabular-nums; }
+      td.up   { color: var(--up);   font-weight: 700; }
+      td.down { color: var(--down); font-weight: 700; }
+    </style>
   </head>
 
   <body>
 
     <header ${selectedEnv.toLowerCase() !== "live" ? "data-nonlive" : ""}>
       <span class="logo">${displayName(env)} / Status</span>
+      <nav class="env-toggle">
+        ${envs.map((e) => `<a href="?env=${e}" class="${e === selectedEnv ? "active" : ""}">${e.toUpperCase()}</a>`).join("")}
+      </nav>
     </header>
+
+    ${
+        staleEnvs.length > 0
+            ? `
+    <div class="stale-warning-banner">
+    ❕ No recent checks recorded: ${staleEnvs.join(", ")}
+    </div>`
+            : ""
+    }
+
+    <div class="summary" id="summary"></div>
+
+    <div class="blocks-wrap">
+      <div class="blocks" id="blocks"></div>
+      <div class="block-tooltip" id="block-tooltip">&nbsp;</div>
+    </div>
+
+    <div class="summary" id="lastTransition"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time (UTC)</th><th>Status</th><th>Latency</th><th>Env</th></tr></thead>
+        <tbody>
+          ${results
+              .slice(0, 15)
+              .map(
+                  (r) => `
+            <tr>
+              <td class="ts">${new Date(r.timestamp).toISOString().replace("T", " ").slice(0, 19)}</td>
+              <td class="${r.is_healthy ? "up" : "down"}">${r.status_code} ${r.is_healthy ? "OK" : "FAIL"}</td>
+              <td class="lat">${r.latency_ms}ms</td>
+              <td class="env">${r.project_env}</td>
+            </tr>`,
+              )
+              .join("")}
+        </tbody>
+      </table>
+      <div style="margin-top:0.5rem;font-size:10px;color:var(--muted);">
+        showing ${Math.min(15, totalCount)}/${totalCount} entries since ${earliestTs} UTC
+        (${Math.floor((Date.now() - new Date(statsRow?.earliest ?? Date.now()).getTime()) / 86400000)} days ago)
+      </div>
+    </div>
+
+
+  <script>
+  (function () {
+    // Escape < so a stored response_body containing a 'script' tag can't break out.
+    const data = ${JSON.stringify(results).replaceAll("<", "\\u003c")}.reverse();
+    const recent12h = data.filter(r => Date.now() - new Date(r.timestamp).getTime() < 43200000);
+
+    // Summary bar
+    const total = recent12h.length;
+    const upCount = recent12h.filter(r => r.is_healthy).length;
+    const uptimePct = total ? ((upCount / total) * 100).toFixed(1) : "—";
+    const avgLatency = total ? Math.round(recent12h.reduce((s, r) => s + r.latency_ms, 0) / total) : "—";
+    const lastHealthy = recent12h.at(-1)?.is_healthy;
+
+    document.getElementById("summary").innerHTML = \`
+      <span class="pill \${lastHealthy ? "pill-up" : "pill-down"}">\${lastHealthy ? "OPERATIONAL" : "DEGRADED"}</span>
+      <span class="summary-stat">Last 12h:</span>
+      <span class="summary-stat"><span>\${uptimePct}%</span> uptime</span>
+      <span class="summary-stat"><span>\${avgLatency}ms</span> μ latency</span>
+      <span class="summary-stat"><span>\${total}</span> checks</span>
+    \`;
+
+    document.getElementById("lastTransition").innerHTML = \`
+      <span class="summary-stat">Last change <span>${lastTransition}</span></span>
+    \`;
+
+    const blocksEl = document.getElementById("blocks");
+    const tooltipEl = document.getElementById("block-tooltip");
+
+    // Status blocks
+    const blockWidth = 16; // 14px + 2px gap
+    const availableWidth = blocksEl.parentElement.clientWidth - 32; // minus 1rem each side
+    const maxBlocks = Math.floor(availableWidth / blockWidth);
+    const blockData = recent12h.slice(-maxBlocks);
+    blocksEl.innerHTML = blockData.map(r => {
+      const t = new Date(r.timestamp).toISOString().replace("T"," ").slice(0,19);
+      return \`<div class="block \${r.is_healthy ? "block-up" : "block-down"}" data-tip="\${t} · \${r.latency_ms}ms"></div>\`;
+    }).join("");
+
+    let activeBlock = null;
+    function showTip(el) {
+      if (activeBlock) activeBlock.classList.remove("active");
+      activeBlock = el; el.classList.add("active");
+      tooltipEl.textContent = el.dataset.tip;
+    }
+    function clearTip(el) {
+      el.classList.remove("active");
+      tooltipEl.innerHTML = "&nbsp;";
+      activeBlock = null;
+    }
+    blocksEl.querySelectorAll(".block").forEach(el => {
+      el.addEventListener("mouseenter", () => showTip(el));
+      el.addEventListener("mouseleave", () => clearTip(el));
+      el.addEventListener("touchstart", e => { e.preventDefault(); showTip(el); }, { passive: false });
+      el.addEventListener("touchend", () => setTimeout(() => clearTip(el), 1500));
+    });
+
+  })();
+  </script>
 
   </body>
 </html>`;

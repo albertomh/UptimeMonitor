@@ -8,20 +8,29 @@ A serverless uptime monitoring tool, for deployment on Cloudflare Workers.
 
 - [pnpm](https://pnpm.io/) must be available locally.
 
-## Local dev quickstart
+## Quickstart
 
 Run the worker locally using Wrangler via pnpm:
 
 ```sh
+# only before first run, replace values in .env file as appropriate
+cp src/.env.example src/.env
+
 pnpm d1:local:init
 pnpm d1:local:seed
 pnpm dev
 ```
 
-Then test locally:
+Navigate to `http://localhost:8787` to see UptimeMonitor working locally.
 
-- `http://localhost:8787/`
-- `http://localhost:8787/__scheduled?cron=*+*+*+*+*`
+Manually trigger the scheduled heartbeat by navigating to: `http://localhost:8787/__scheduled?cron=*+*+*+*+*`
+
+<!-- markdownlint-disable MD033 no-inline-html -->
+<p align="center">
+    <!-- markdownlint-disable-next-line MD013 line-length -->
+    <img src="./docs/UptimeMonitor_screenshot.png" alt="UptimeMonitor screenshot showing latency graph and last fifteen heartbeats" width="500">
+</p>
+<!-- markdownlint-enable MD033 no-inline-html -->
 
 ## Run tests
 
@@ -32,3 +41,7 @@ pnpm test
 ```
 
 These also run in CI for every branch and merge commit.
+
+## Develop
+
+- [prek](https://prek.j178.dev/) must be available locally to run pre-commit hooks.

@@ -250,3 +250,19 @@ describe("fetch handler", () => {
         expect(response.status).toBe(200);
     });
 });
+
+describe("fetch handler /vendor/chart.js", () => {
+    it("returns JS with long-lived cache headers", async () => {
+        const request = new Request("http://localhost/vendor/chart.js");
+        const ctx = {
+            waitUntil: () => {},
+            passThroughOnException: () => {},
+        } as ExecutionContext;
+        const response = await worker.fetch(request, env as Env, ctx);
+        expect(response.status).toBe(200);
+        expect(response.headers.get("Content-Type")).toBe(
+            "application/javascript",
+        );
+        expect(response.headers.get("Cache-Control")).toContain("immutable");
+    });
+});

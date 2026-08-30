@@ -1,3 +1,7 @@
+// Vendored Chart.js (see vendor/), inlined as a string by esbuild/wrangler text
+// loaders and served from /vendor/chart.js — no third-party CDN on the status page.
+import chartJsSource from "./vendor/chart.umd.min.js.txt";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,14 +32,9 @@ interface DbHealthCheck {
     is_healthy: number; // 0 | 1
 }
 
-export interface Env {
-    DB: D1Database;
-    TARGETS_JSON: string;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Env bindings
-// Extend this interface to match wrangler.toml / OpenTofu bindings.
+// Extend this interface to match wrangler.jsonc / OpenTofu bindings.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface Env {
@@ -43,59 +42,6 @@ export interface Env {
     TARGETS_JSON: string;
     // human-readable project name for emails/dashboard; injected by OpenTofu
     PROJECT_DISPLAY_NAME: string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DB helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function toHealthcheckTableRow(result: HealthCheckResult): DbHealthCheck {
-    return {
-        id: 0,
-        timestamp: new Date().toISOString(),
-        project_env: result.project_env,
-        target_url: result.target_url,
-        status_code: result.status_code,
-        latency_ms: result.latency_ms,
-        response_body: result.response_body,
-        is_healthy: result.is_healthy ? 1 : 0,
-    };
-}
-
-async function saveResult(
-    db: D1Database,
-    result: HealthCheckResult,
-): Promise<void> {
-    const row = toHealthcheckTableRow(result);
-    await db
-        .prepare(
-            `INSERT INTO healthcheck
-             (timestamp, project_env, target_url, status_code, latency_ms, response_body, is_healthy)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-            row.timestamp,
-            row.project_env,
-            row.target_url,
-            row.status_code,
-            row.latency_ms,
-            row.response_body,
-            row.is_healthy,
-        )
-        .run();
-}
-
-async function cleanUpOldEntries(
-    db: D1Database,
-    daysToKeep = 30,
-): Promise<void> {
-    const cutoffDate = new Date(
-        Date.now() - daysToKeep * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    await db
-        .prepare("DELETE FROM healthcheck WHERE timestamp < ?")
-        .bind(cutoffDate)
-        .run();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,6 +146,59 @@ export async function performHealthCheck(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DB helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toHealthcheckTableRow(result: HealthCheckResult): DbHealthCheck {
+    return {
+        id: 0,
+        timestamp: new Date().toISOString(),
+        project_env: result.project_env,
+        target_url: result.target_url,
+        status_code: result.status_code,
+        latency_ms: result.latency_ms,
+        response_body: result.response_body,
+        is_healthy: result.is_healthy ? 1 : 0,
+    };
+}
+
+async function saveResult(
+    db: D1Database,
+    result: HealthCheckResult,
+): Promise<void> {
+    const row = toHealthcheckTableRow(result);
+    await db
+        .prepare(
+            `INSERT INTO healthcheck
+             (timestamp, project_env, target_url, status_code, latency_ms, response_body, is_healthy)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+            row.timestamp,
+            row.project_env,
+            row.target_url,
+            row.status_code,
+            row.latency_ms,
+            row.response_body,
+            row.is_healthy,
+        )
+        .run();
+}
+
+async function cleanUpOldEntries(
+    db: D1Database,
+    daysToKeep = 30,
+): Promise<void> {
+    const cutoffDate = new Date(
+        Date.now() - daysToKeep * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    await db
+        .prepare("DELETE FROM healthcheck WHERE timestamp < ?")
+        .bind(cutoffDate)
+        .run();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Scheduled handler
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -229,6 +228,16 @@ async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
 
 async function handleFetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === "/vendor/chart.js") {
+        return new Response(chartJsSource, {
+            headers: {
+                "Content-Type": "application/javascript",
+                "Cache-Control": "public, max-age=31536000, immutable",
+            },
+        });
+    }
+
     const envFilter = url.searchParams.get("env");
 
     const { results: envRows } = await env.DB.prepare(
@@ -350,6 +359,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       .block-tooltip { height: 1.6rem; display: flex; align-items: center; padding: 0.2rem 0; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .charts { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
       .chart-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+      canvas#latencyChart { width: 100% !important; height: 120px !important; }
       .table-wrap { overflow-x: auto; padding: 0 1rem 1rem; }
       table { width: 100%; border-collapse: collapse; }
       thead th { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
@@ -390,6 +400,11 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     </div>
 
     <div class="summary" id="lastTransition"></div>
+
+    <div class="charts">
+      <div class="chart-label">Latency (ms)</div>
+      <canvas id="latencyChart"></canvas>
+    </div>
 
     <div class="table-wrap">
       <table>
@@ -472,6 +487,75 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       el.addEventListener("touchend", () => setTimeout(() => clearTip(el), 1500));
     });
 
+    const chartData = recent12h
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() -
+        new Date(b.timestamp).getTime(),
+    );
+
+    const labels = [];
+    const values = [];
+
+    const now = Date.now();
+    for (let i = 12 * 60 - 1; i >= 0; i--) {
+      const t = new Date(now - i * 60 * 1000);
+      labels.push(t.toISOString().slice(11, 16));
+      values.push(null);
+    }
+
+    // Put actual measurements into their minute slots.
+    for (const r of chartData) {
+      const ageMinutes = Math.floor(
+        (now - new Date(r.timestamp).getTime()) / 60000,
+      );
+
+      const index = 12 * 60 - 1 - ageMinutes;
+      if (index >= 0 && index < values.length) {
+        values[index] = r.latency_ms;
+      }
+    }
+
+    new Chart(document.getElementById("latencyChart").getContext("2d"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "${selectedEnv.toUpperCase()}",
+          data: values,
+          yAxisID: "y",
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59,130,246,0.08)",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+          spanGaps: true,
+        }]
+      },
+      options: {
+        animation: false, maintainAspectRatio: false, responsive: true,
+        scales: {
+          x: { ticks: { color: "#6b6b7a", font: { size: 10 }, maxTicksLimit: 12, autoSkip: true }, grid: { color: "#2a2a30" } },
+          y: { beginAtZero: true, ticks: { color: "#6b6b7a", font: { size: 10 } }, grid: { color: "#2a2a30" } },
+          y2: {
+              position: "right",
+              beginAtZero: true,
+              min: 0,
+              ticks: { color: "#6b6b7a", font: { size: 10 } },
+              grid: { drawOnChartArea: false },
+              display: window.innerWidth >= 640,
+              afterDataLimits(scale) {
+                const y = scale.chart.scales.y;
+                scale.min = y.min;
+                scale.max = y.max;
+              },
+          }
+        },
+        plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false, backgroundColor: "#16161a", titleColor: "#e8e8ec", bodyColor: "#6b6b7a", borderColor: "#2a2a30", borderWidth: 1 } }
+      }
+    });
   })();
   </script>
 

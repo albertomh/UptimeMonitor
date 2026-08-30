@@ -39,9 +39,9 @@ interface DbHealthCheck {
 
 export interface Env {
     DB: D1Database;
-    TARGETS_JSON: string;
     // human-readable project name for emails/dashboard; injected by OpenTofu
     PROJECT_DISPLAY_NAME: string;
+    TARGETS_JSON: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -282,7 +282,22 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         .first<{ timestamp: string; is_healthy: number }>();
 
     const lastTransition = lastTransitionRow
-        ? `${lastTransitionRow.timestamp.replace("T", " ").slice(0, 19)} UTC (${Math.floor((Date.now() - new Date(lastTransitionRow?.timestamp ?? Date.now()).getTime()) / 86400000)} days ago)`
+        ? (() => {
+              const ts = lastTransitionRow.timestamp;
+              const diffMs = Date.now() - new Date(ts).getTime();
+              const diffMins = Math.floor(diffMs / 60_000);
+              const diffHours = Math.floor(diffMs / 3_600_000);
+              const diffDays = Math.floor(diffMs / 86_400_000);
+              const ago =
+                  diffMins < 1
+                      ? "just now"
+                      : diffMins < 60
+                        ? `${diffMins}m ago`
+                        : diffHours < 24
+                          ? `${diffHours}h ago`
+                          : `${diffDays}d ago`;
+              return `${ts.replace("T", " ").slice(0, 19)} UTC (${ago})`;
+          })()
         : "no transitions recorded";
 
     const staleRows = await env.DB.prepare(
@@ -426,7 +441,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       </table>
       <div style="margin-top:0.5rem;font-size:10px;color:var(--muted);">
         showing ${Math.min(15, totalCount)}/${totalCount} entries since ${earliestTs} UTC
-        (${Math.floor((Date.now() - new Date(statsRow?.earliest ?? Date.now()).getTime()) / 86400000)} days ago)
+        (${Math.floor((Date.now() - new Date(statsRow?.earliest ?? Date.now()).getTime()) / 86_400_000)} days ago)
       </div>
     </div>
 
@@ -435,7 +450,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
   (function () {
     // Escape < so a stored response_body containing a 'script' tag can't break out.
     const data = ${JSON.stringify(results).replaceAll("<", "\\u003c")}.reverse();
-    const recent12h = data.filter(r => Date.now() - new Date(r.timestamp).getTime() < 43200000);
+    const recent12h = data.filter(r => Date.now() - new Date(r.timestamp).getTime() < 43_200_000);
 
     // Summary bar
     const total = recent12h.length;
@@ -508,7 +523,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     // Put actual measurements into their minute slots.
     for (const r of chartData) {
       const ageMinutes = Math.floor(
-        (now - new Date(r.timestamp).getTime()) / 60000,
+        (now - new Date(r.timestamp).getTime()) / 60_000,
       );
 
       const index = 12 * 60 - 1 - ageMinutes;
@@ -516,6 +531,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         values[index] = r.latency_ms;
       }
     }
+
+    const maxLatency = Math.max(...values.filter(v => v !== null));
+    const step = Math.pow(10, Math.floor(Math.log10(maxLatency))) / 2;
+    const yMax = Math.ceil(maxLatency / step) * step + step;
 
     new Chart(document.getElementById("latencyChart").getContext("2d"), {
       type: "line",

@@ -233,6 +233,115 @@ describe("performHealthCheck", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// escapeHtml
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { escapeHtml } from "./index";
+
+describe("escapeHtml", () => {
+    it("passes through plain text unchanged", () => {
+        expect(escapeHtml("hello world")).toBe("hello world");
+    });
+
+    it.each([
+        ["&", "&amp;"],
+        ["<", "&lt;"],
+        [">", "&gt;"],
+        ['"', "&quot;"],
+    ])("escapes %s", (input, expected) => {
+        expect(escapeHtml(input)).toBe(expected);
+    });
+
+    it("escapes multiple special chars in one string", () => {
+        expect(escapeHtml('<a href="x">hi & bye</a>')).toBe(
+            "&lt;a href=&quot;x&quot;&gt;hi &amp; bye&lt;/a&gt;",
+        );
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getAlertRecipients (via makeEnv)
+// ─────────────────────────────────────────────────────────────────────────────
+// getAlertRecipients is not exported, so exercise it through sendAlertEmail
+// by verifying what gets POSTed to Mailtrap. Alternatively, export it and
+// import directly — the tests below assume it's exported.
+
+import { getAlertRecipients } from "./index";
+
+function makeAlertEnv(alertToAddresses: string): Env {
+    return {
+        TARGETS_JSON: "[]",
+        PROJECT_DISPLAY_NAME: "Test",
+        ALERT_TO_ADDRESSES: alertToAddresses,
+        ALERT_FROM: "from@example.com",
+        ALERT_PROVIDER: "mailtrap",
+        ALERT_API_KEY: "key",
+    } as unknown as Env;
+}
+
+describe("getAlertRecipients", () => {
+    it("returns list of addresses from valid JSON array", () => {
+        const env = makeAlertEnv('["a@b.com","c@d.com"]');
+        expect(getAlertRecipients(env)).toEqual(["a@b.com", "c@d.com"]);
+    });
+
+    it("returns [] for invalid JSON", () => {
+        expect(getAlertRecipients(makeAlertEnv("not-json"))).toEqual([]);
+    });
+
+    it("returns [] when value is not an array", () => {
+        expect(getAlertRecipients(makeAlertEnv('"a@b.com"'))).toEqual([]);
+        expect(getAlertRecipients(makeAlertEnv("{}"))).toEqual([]);
+    });
+
+    it("filters out non-string entries", () => {
+        const env = makeAlertEnv('["a@b.com", 42, null, "c@d.com"]');
+        expect(getAlertRecipients(env)).toEqual(["a@b.com", "c@d.com"]);
+    });
+
+    it("returns [] for empty array", () => {
+        expect(getAlertRecipients(makeAlertEnv("[]"))).toEqual([]);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getPreviousIsHealthyValue
+// ─────────────────────────────────────────────────────────────────────────────
+// Tested indirectly via the scheduled handler's alerting behaviour — stubbing
+// the D1 first() call. If getPreviousIsHealthyValue is exported, prefer direct
+// tests.
+
+import { getPreviousIsHealthyValue } from "./index";
+
+function makeDb(row: { is_healthy: number } | null): D1Database {
+    return {
+        prepare: () => ({
+            bind: () => ({
+                first: vi.fn().mockResolvedValue(row),
+            }),
+        }),
+    } as unknown as D1Database;
+}
+
+describe("getPreviousIsHealthyValue", () => {
+    it("returns null when no prior row exists", async () => {
+        expect(await getPreviousIsHealthyValue(makeDb(null), "dev")).toBeNull();
+    });
+
+    it("returns true when prior row has is_healthy=1", async () => {
+        expect(
+            await getPreviousIsHealthyValue(makeDb({ is_healthy: 1 }), "dev"),
+        ).toBe(true);
+    });
+
+    it("returns false when prior row has is_healthy=0", async () => {
+        expect(
+            await getPreviousIsHealthyValue(makeDb({ is_healthy: 0 }), "dev"),
+        ).toBe(false);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // fetch handler
 // ─────────────────────────────────────────────────────────────────────────────
 

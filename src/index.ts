@@ -42,6 +42,12 @@ export interface Env {
     // human-readable project name for emails/dashboard; injected by OpenTofu
     PROJECT_DISPLAY_NAME: string;
     TARGETS_JSON: string;
+
+    ALERT_TO_ADDRESSES: string; // string-encoded list of recipient addresses
+    ALERT_FROM: string; // sender address (must be verified with provider)
+
+    ALERT_PROVIDER: "mailtrap";
+    ALERT_API_KEY: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -198,6 +204,162 @@ async function cleanUpOldEntries(
         .run();
 }
 
+// Returns the is_healthy value of the most recent prior check for this env,
+// or null if none exists (first run — don't alert).
+export async function getPreviousIsHealthyValue(
+    db: D1Database,
+    project_env: string,
+): Promise<boolean | null> {
+    const row = await db
+        .prepare(
+            `SELECT is_healthy FROM healthcheck
+             WHERE project_env = ?
+             ORDER BY timestamp DESC
+             LIMIT 1`,
+        )
+        .bind(project_env)
+        .first<{ is_healthy: number }>();
+
+    return row ? row.is_healthy === 1 : null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Alerting
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function escapeHtml(value: string): string {
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+}
+
+export function getAlertRecipients(env: Env): string[] {
+    try {
+        const parsed: unknown = JSON.parse(env.ALERT_TO_ADDRESSES);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((v): v is string => typeof v === "string");
+    } catch {
+        return [];
+    }
+}
+
+async function sendMailtrapEmail(
+    apiKey: string,
+    fromAddress: string,
+    toAddresses: string[],
+    subject: string,
+    html: string,
+): Promise<void> {
+    const res = await fetch("https://send.api.mailtrap.io/api/send", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            from: { email: fromAddress },
+            to: toAddresses.map((email) => ({ email })),
+            subject,
+            html,
+        }),
+    });
+
+    if (!res.ok) {
+        console.error("Mailtrap error", res.status, await res.text());
+    }
+}
+
+async function sendInitialEmail(
+    env: Env,
+    result: HealthCheckResult,
+): Promise<void> {
+    const subject = `[${displayName(env)}] UptimeMonitor online`;
+    const htmlBody = `
+<table style="border-collapse:collapse;font-family:monospace;font-size:12px;">
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Time</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${new Date().toISOString()}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Environment</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${result.project_env.toUpperCase()}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Status</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">online</td>
+  </tr>
+</table>
+`.trim();
+
+    await sendMailtrapEmail(
+        env.ALERT_API_KEY,
+        env.ALERT_FROM,
+        getAlertRecipients(env),
+        subject,
+        htmlBody,
+    );
+    return;
+}
+
+async function sendAlertEmail(
+    env: Env,
+    result: HealthCheckResult,
+): Promise<void> {
+    const status = result.is_healthy ? "RECOVERED ✅" : "DOWN ❌";
+    const subject = `[${displayName(env)}] ${result.project_env.toUpperCase()} is ${status}`;
+
+    const httpCode =
+        result.status_code === 0 ? "NETWORK ERROR" : String(result.status_code);
+    const htmlBody = `
+<table style="border-collapse:collapse;font-family:monospace;font-size:12px;">
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Time</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${new Date().toISOString()}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Environment</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${result.project_env.toUpperCase()}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">URL</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${result.target_url}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Status</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${status}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">HTTP code</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${httpCode}</td>
+  </tr>
+  ${
+      result.response_body
+          ? `<tr>
+               <td style="padding:4px 8px;border:1px solid #fff;">Response</td>
+               <td style="padding:4px 8px;border:1px solid #fff;">${escapeHtml(result.response_body)}</td>
+             </tr>`
+          : ""
+}
+  <tr>
+    <td style="padding:4px 8px;border:1px solid #fff;">Latency</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${result.latency_ms} ms</td>
+  </tr>
+</table>
+`.trim();
+
+    if (env.ALERT_PROVIDER === "mailtrap") {
+        await sendMailtrapEmail(
+            env.ALERT_API_KEY,
+            env.ALERT_FROM,
+            getAlertRecipients(env),
+            subject,
+            htmlBody,
+        );
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Scheduled handler
 // ─────────────────────────────────────────────────────────────────────────────
@@ -213,7 +375,23 @@ async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
 
     await Promise.all(
         results.map(async (result) => {
+            const previousIsHealthyValue = await getPreviousIsHealthyValue(
+                env.DB,
+                result.project_env,
+            );
+
             await saveResult(env.DB, result);
+
+            // Null on first run. Send email, but also don't fire a spurious
+            // DOWN/RECOVERED transition alert.
+            if (previousIsHealthyValue === null) {
+                await sendInitialEmail(env, result);
+                return;
+            }
+
+            if (previousIsHealthyValue !== result.is_healthy) {
+                await sendAlertEmail(env, result);
+            }
         }),
     );
 
@@ -572,7 +750,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
               },
           }
         },
-        plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false, backgroundColor: "#16161a", titleColor: "#e8e8ec", bodyColor: "#6b6b7a", borderColor: "#2a2a30", borderWidth: 1 } }
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: "index", intersect: false, backgroundColor: "#16161a", titleColor: "#e8e8ec", bodyColor: "#6b6b7a", borderColor: "#2a2a30", borderWidth: 1 }
+        }
       }
     });
   })();

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/albertomh/UptimeWorker/compare/uptime-worker-1.0.0...uptime-worker-1.1.0) (2026-09-01)
+
+
+### Features
+
+* Geofence requests to the dashboard by country ([#19](https://github.com/albertomh/UptimeWorker/issues/19)) ([d4d67e8](https://github.com/albertomh/UptimeWorker/commit/d4d67e875dc7a5fc411515736e74e5d5d3fbca01))
+* Send email alerts on first run and state transitions ([#17](https://github.com/albertomh/UptimeWorker/issues/17)) ([1245516](https://github.com/albertomh/UptimeWorker/commit/12455161e79c718f9ae3a7bf0e16feac2e6c044e))
+
+
+### Bug Fixes
+
+* Escape rendered status fields ([#23](https://github.com/albertomh/UptimeWorker/issues/23)) ([9a4c3f4](https://github.com/albertomh/UptimeWorker/commit/9a4c3f48871ce116f7fc4df3addcbd94f2f2f9af))
+* Isolate alert state by target ([#22](https://github.com/albertomh/UptimeWorker/issues/22)) ([a9cec6d](https://github.com/albertomh/UptimeWorker/commit/a9cec6ddb08198b47e211985dd6bb8263c028077))
+
 ## 1.0.0 (2026-08-30)
 
 

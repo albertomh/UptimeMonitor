@@ -43,6 +43,10 @@ export interface Env {
     PROJECT_DISPLAY_NAME: string;
     TARGETS_JSON: string;
 
+    // two-letter country codes
+    // <https://developers.cloudflare.com/workers/runtime-apis/request/#:~:text=country>
+    FRONTEND_ALLOWED_COUNTRIES: string; // comma-separated, e.g. "GB,US,FR"
+
     ALERT_TO_ADDRESSES: string; // string-encoded list of recipient addresses
     ALERT_FROM: string; // sender address (must be verified with provider)
 
@@ -405,6 +409,14 @@ async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function handleFetch(request: Request, env: Env): Promise<Response> {
+    const allowed = env.FRONTEND_ALLOWED_COUNTRIES.split(",").map((s) =>
+        s.trim(),
+    );
+    const requestCountry = (request.cf as IncomingRequestCfProperties)?.country;
+    if (requestCountry && !allowed.includes(requestCountry)) {
+        return new Response(null, { status: 404 });
+    }
+
     const url = new URL(request.url);
 
     if (url.pathname === "/vendor/chart.js") {

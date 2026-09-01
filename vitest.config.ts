@@ -9,7 +9,10 @@ export default defineConfig({
         cloudflareTest({
             wrangler: { configPath: "./wrangler.jsonc" },
             miniflare: {
-                bindings: { TEST_SCHEMA: schema },
+                bindings: {
+                    TEST_SCHEMA: schema,
+                    FRONTEND_ALLOWED_COUNTRIES: "GB,US",
+                },
             },
         }),
     ],

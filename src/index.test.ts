@@ -5,6 +5,7 @@ import {
     isMonitorTarget,
     parseCronMinuteInterval,
     performHealthCheck,
+    sendAlertEmail,
 } from "./index";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -371,6 +372,35 @@ describe("getPreviousIsHealthyValue", () => {
     });
 });
 
+describe("sendAlertEmail", () => {
+    beforeEach(() => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
+        );
+    });
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("escapes environment and URL in the email body", async () => {
+        await sendAlertEmail(makeAlertEnv('["a@b.com"]'), {
+            project_env: '<script>alert("env")</script>',
+            target_url: 'https://example.com/?q=<script>alert("url")</script>',
+            status_code: 503,
+            latency_ms: 123,
+            response_body: "",
+            is_healthy: false,
+        });
+
+        const [, init] = vi.mocked(fetch).mock.calls[0];
+        const body = JSON.parse(String(init?.body)) as { html: string };
+        expect(body.html).not.toContain("<script>");
+        expect(body.html).toContain("&lt;SCRIPT&gt;ALERT(&quot;ENV&quot;)");
+        expect(body.html).toContain("&lt;script&gt;alert(&quot;url&quot;)");
+    });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // fetch handler
 // ─────────────────────────────────────────────────────────────────────────────
@@ -387,6 +417,40 @@ describe("fetch handler", () => {
         } as ExecutionContext;
         const response = await worker.fetch(request, env as Env, ctx);
         expect(response.status).toBe(200);
+    });
+
+    it("escapes stored environment names in dashboard HTML", async () => {
+        const maliciousEnv = '<script>alert("dash")</script>';
+        await env.DB.prepare(
+            `INSERT INTO healthcheck
+             (timestamp, project_env, target_url, status_code, latency_ms, response_body, is_healthy)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+            .bind(
+                new Date().toISOString(),
+                maliciousEnv,
+                "https://example.com/health",
+                200,
+                42,
+                "",
+                1,
+            )
+            .run();
+
+        const request = new Request(
+            `http://localhost/?env=${encodeURIComponent(maliciousEnv)}`,
+        );
+        const ctx = {
+            waitUntil: () => {},
+            passThroughOnException: () => {},
+        } as ExecutionContext;
+        const response = await worker.fetch(request, env as Env, ctx);
+        const text = await response.text();
+
+        expect(response.status).toBe(200);
+        expect(text).not.toContain("<script>alert");
+        expect(text).toContain("&lt;SCRIPT&gt;ALERT(&quot;DASH&quot;)");
+        expect(text).toContain(`?env=${encodeURIComponent(maliciousEnv)}`);
     });
 });
 

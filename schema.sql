@@ -12,3 +12,4 @@ CREATE TABLE IF NOT EXISTS healthcheck (
 CREATE INDEX IF NOT EXISTS idx_healthcheck_timestamp ON healthcheck(timestamp);
 CREATE INDEX IF NOT EXISTS idx_healthcheck_target ON healthcheck(target_url);
 CREATE INDEX IF NOT EXISTS idx_healthcheck_project_env ON healthcheck(project_env);
+CREATE INDEX IF NOT EXISTS idx_healthcheck_env_target_timestamp ON healthcheck(project_env, target_url, timestamp);

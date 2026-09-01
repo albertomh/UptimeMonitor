@@ -313,31 +313,61 @@ describe("getAlertRecipients", () => {
 
 import { getPreviousIsHealthyValue } from "./index";
 
-function makeDb(row: { is_healthy: number } | null): D1Database {
+function makeDb(
+    row: { is_healthy: number } | null,
+    onBind?: (...args: unknown[]) => void,
+): D1Database {
     return {
         prepare: () => ({
-            bind: () => ({
-                first: vi.fn().mockResolvedValue(row),
-            }),
+            bind: (...args: unknown[]) => {
+                onBind?.(...args);
+                return {
+                    first: vi.fn().mockResolvedValue(row),
+                };
+            },
         }),
     } as unknown as D1Database;
 }
 
 describe("getPreviousIsHealthyValue", () => {
     it("returns null when no prior row exists", async () => {
-        expect(await getPreviousIsHealthyValue(makeDb(null), "dev")).toBeNull();
+        expect(
+            await getPreviousIsHealthyValue(
+                makeDb(null),
+                "dev",
+                "https://example.com/health",
+            ),
+        ).toBeNull();
     });
 
     it("returns true when prior row has is_healthy=1", async () => {
         expect(
-            await getPreviousIsHealthyValue(makeDb({ is_healthy: 1 }), "dev"),
+            await getPreviousIsHealthyValue(
+                makeDb({ is_healthy: 1 }),
+                "dev",
+                "https://example.com/health",
+            ),
         ).toBe(true);
     });
 
     it("returns false when prior row has is_healthy=0", async () => {
         expect(
-            await getPreviousIsHealthyValue(makeDb({ is_healthy: 0 }), "dev"),
+            await getPreviousIsHealthyValue(
+                makeDb({ is_healthy: 0 }),
+                "dev",
+                "https://example.com/health",
+            ),
         ).toBe(false);
+    });
+
+    it("looks up prior health by environment and URL", async () => {
+        const bind = vi.fn();
+        await getPreviousIsHealthyValue(
+            makeDb({ is_healthy: 1 }, bind),
+            "dev",
+            "https://example.com/health",
+        );
+        expect(bind).toHaveBeenCalledWith("dev", "https://example.com/health");
     });
 });
 

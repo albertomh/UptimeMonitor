@@ -208,20 +208,21 @@ async function cleanUpOldEntries(
         .run();
 }
 
-// Returns the is_healthy value of the most recent prior check for this env,
+// Returns the is_healthy value of the most recent prior check for this target,
 // or null if none exists (first run — don't alert).
 export async function getPreviousIsHealthyValue(
     db: D1Database,
     project_env: string,
+    target_url: string,
 ): Promise<boolean | null> {
     const row = await db
         .prepare(
             `SELECT is_healthy FROM healthcheck
-             WHERE project_env = ?
+             WHERE project_env = ? AND target_url = ?
              ORDER BY timestamp DESC
              LIMIT 1`,
         )
-        .bind(project_env)
+        .bind(project_env, target_url)
         .first<{ is_healthy: number }>();
 
     return row ? row.is_healthy === 1 : null;
@@ -382,6 +383,7 @@ async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
             const previousIsHealthyValue = await getPreviousIsHealthyValue(
                 env.DB,
                 result.project_env,
+                result.target_url,
             );
 
             await saveResult(env.DB, result);

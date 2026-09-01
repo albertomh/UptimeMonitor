@@ -240,6 +240,10 @@ export function escapeHtml(value: string): string {
         .replaceAll('"', "&quot;");
 }
 
+function escapeHtmlText(value: string): string {
+    return escapeHtml(value);
+}
+
 export function getAlertRecipients(env: Env): string[] {
     try {
         const parsed: unknown = JSON.parse(env.ALERT_TO_ADDRESSES);
@@ -289,7 +293,7 @@ async function sendInitialEmail(
   </tr>
   <tr>
     <td style="padding:4px 8px;border:1px solid #fff;">Environment</td>
-    <td style="padding:4px 8px;border:1px solid #fff;">${result.project_env.toUpperCase()}</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${escapeHtmlText(result.project_env.toUpperCase())}</td>
   </tr>
   <tr>
     <td style="padding:4px 8px;border:1px solid #fff;">Status</td>
@@ -308,7 +312,7 @@ async function sendInitialEmail(
     return;
 }
 
-async function sendAlertEmail(
+export async function sendAlertEmail(
     env: Env,
     result: HealthCheckResult,
 ): Promise<void> {
@@ -325,11 +329,11 @@ async function sendAlertEmail(
   </tr>
   <tr>
     <td style="padding:4px 8px;border:1px solid #fff;">Environment</td>
-    <td style="padding:4px 8px;border:1px solid #fff;">${result.project_env.toUpperCase()}</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${escapeHtmlText(result.project_env.toUpperCase())}</td>
   </tr>
   <tr>
     <td style="padding:4px 8px;border:1px solid #fff;">URL</td>
-    <td style="padding:4px 8px;border:1px solid #fff;">${result.target_url}</td>
+    <td style="padding:4px 8px;border:1px solid #fff;">${escapeHtmlText(result.target_url)}</td>
   </tr>
   <tr>
     <td style="padding:4px 8px;border:1px solid #fff;">Status</td>
@@ -527,7 +531,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${displayName(env)} status · ${selectedEnv.toUpperCase()}</title>
+    <title>${escapeHtmlText(displayName(env))} status · ${escapeHtmlText(selectedEnv.toUpperCase())}</title>
     <script src="/vendor/chart.js"></script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -584,9 +588,9 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
   <body>
 
     <header ${selectedEnv.toLowerCase() !== "live" ? "data-nonlive" : ""}>
-      <span class="logo">${displayName(env)} / Status</span>
+      <span class="logo">${escapeHtmlText(displayName(env))} / Status</span>
       <nav class="env-toggle">
-        ${envs.map((e) => `<a href="?env=${e}" class="${e === selectedEnv ? "active" : ""}">${e.toUpperCase()}</a>`).join("")}
+        ${envs.map((e) => `<a href="?env=${encodeURIComponent(e)}" class="${e === selectedEnv ? "active" : ""}">${escapeHtmlText(e.toUpperCase())}</a>`).join("")}
       </nav>
     </header>
 
@@ -594,7 +598,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         staleEnvs.length > 0
             ? `
     <div class="stale-warning-banner">
-    ❕ No recent checks recorded: ${staleEnvs.join(", ")}
+    ❕ No recent checks recorded: ${staleEnvs.map(escapeHtmlText).join(", ")}
     </div>`
             : ""
     }
@@ -625,7 +629,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
               <td class="ts">${new Date(r.timestamp).toISOString().replace("T", " ").slice(0, 19)}</td>
               <td class="${r.is_healthy ? "up" : "down"}">${r.status_code} ${r.is_healthy ? "OK" : "FAIL"}</td>
               <td class="lat">${r.latency_ms}ms</td>
-              <td class="env">${r.project_env}</td>
+              <td class="env">${escapeHtmlText(r.project_env)}</td>
             </tr>`,
               )
               .join("")}
@@ -733,7 +737,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       data: {
         labels,
         datasets: [{
-          label: "${selectedEnv.toUpperCase()}",
+          label: ${JSON.stringify(selectedEnv.toUpperCase())},
           data: values,
           yAxisID: "y",
           borderColor: "#3b82f6",

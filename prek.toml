@@ -50,7 +50,7 @@ hooks = [
     { id = "biome-check", exclude = { glob = [
         "**/mvp.css",
         "**/worker-configuration.d.ts",
-        "_infra/UptimeMonitor/dist/**",
+        "_infra/UptimeWorker/dist/**",
     ] } },
 ]
 repo = "https://github.com/biomejs/pre-commit"

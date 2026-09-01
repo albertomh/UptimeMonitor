@@ -150,7 +150,7 @@ describe("performHealthCheck", () => {
         );
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.is_healthy).toBe(true);
         expect(result.status_code).toBe(200);
@@ -163,7 +163,7 @@ describe("performHealthCheck", () => {
         );
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.is_healthy).toBe(false);
         expect(result.response_body).not.toBe("");
@@ -175,7 +175,7 @@ describe("performHealthCheck", () => {
         );
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.is_healthy).toBe(false);
         expect(result.status_code).toBe(503);
@@ -187,7 +187,7 @@ describe("performHealthCheck", () => {
         );
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.is_healthy).toBe(false);
         expect(result.status_code).toBe(500);
@@ -197,7 +197,7 @@ describe("performHealthCheck", () => {
         vi.mocked(fetch).mockRejectedValueOnce(new Error("network failure"));
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.is_healthy).toBe(false);
         expect(result.status_code).toBe(0);
@@ -214,7 +214,7 @@ describe("performHealthCheck", () => {
         );
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.response_body.length).toBeLessThanOrEqual(500);
     });
@@ -225,7 +225,7 @@ describe("performHealthCheck", () => {
         );
         const result = await performHealthCheck(
             healthTarget,
-            "Test-UptimeMonitor",
+            "Test-UptimeWorker",
         );
         expect(result.project_env).toBe("live");
         expect(result.target_url).toBe("https://example.com/health");

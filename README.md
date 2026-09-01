@@ -1,13 +1,13 @@
 <!-- markdownlint-disable MD041 first-line-heading/first-line-h1 -->
 
-![UptimeMonitor logo: pixel art of an ECG-like monitor showing a heart](./docs/UptimeMonitor.png)
+![UptimeWorker logo: pixel art of an ECG-like monitor showing a heart](./docs/UptimeWorker.png)
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=ffffff)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=ffffff)](https://pnpm.io/)
+[![pnpm](https://img.shields.io/badge/pnpm-FFFFFF?logo=pnpm&logoColor=000000)](https://pnpm.io/)
 [![vitest](https://img.shields.io/badge/vitest-6E9F18?logo=vitest&logoColor=ffffff)](https://vitest.dev/)
 [![prek](https://img.shields.io/badge/prek-CC5A23?logo=prek&logoColor=FFFFFF)](https://github.com/j178/prek)
 [![Biome](https://img.shields.io/badge/Biome-FFFFFF?logo=biome&logoColor=60A5FA)](https://github.com/biomejs/biome)
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=ffffff)](https://workers.cloudflare.com/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F48120?logo=cloudflare&logoColor=ffffff)](https://workers.cloudflare.com/)
 
 A serverless uptime monitoring tool, for deployment on Cloudflare Workers.
 
@@ -16,7 +16,7 @@ Simple interface showing health over last 12 hours and email alerts sent on stat
 <!-- markdownlint-disable MD033 no-inline-html -->
 <p align="center">
     <!-- markdownlint-disable-next-line MD013 line-length -->
-    <img src="./docs/UptimeMonitor_screenshot.png" alt="UptimeMonitor screenshot showing latency graph and last fifteen heartbeats" width="500">
+    <img src="./docs/UptimeWorker_screenshot.png" alt="UptimeWorker screenshot showing latency graph and last fifteen heartbeats" width="500">
 </p>
 <!-- markdownlint-enable MD033 no-inline-html -->
 
@@ -37,13 +37,13 @@ pnpm d1:local:seed
 pnpm dev
 ```
 
-Navigate to `http://localhost:8787` to see UptimeMonitor working locally.
+Navigate to `http://localhost:8787` to see UptimeWorker running locally.
 
 Manually trigger the scheduled heartbeat by navigating to: `http://localhost:8787/__scheduled?cron=*+*+*+*+*`
 
 ## Email alerts
 
-UptimeMonitor is configured to send emails via Mailtrap out of the box.
+UptimeWorker is configured to send emails via Mailtrap out of the box.
 
 Extend `sendAlertEmail` and set the `ALERT_PROVIDER` environment variable accordingly to add
 support for other providers.
@@ -61,3 +61,22 @@ pnpm test
 ```
 
 These also run in CI for every branch and merge commit.
+
+## Motivation
+
+A number of uptime monitors already exist. However, I faced the following
+issues with those that I tried:
+
+- Price. Some hosted offerings have free tiers, but these are not very generous
+  or check sites so infrequently as to be useless.
+- Complexity. Both paid & open-source tools over-extend themselves and 1) try
+  to do too much 2) have too many settings to fiddle with.
+- Maintenance burden. Most of the host-it-yourself projects require standing up
+  a whole server (and looking after it). I wanted something serverless I could
+  deploy and forget about.
+
+---
+
+## Acknowledgements
+
+Wordmark typeset in [Jacquard 24](https://fonts.google.com/specimen/Jacquard+24).

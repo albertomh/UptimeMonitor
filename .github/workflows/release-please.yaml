@@ -7,15 +7,15 @@
 #
 # IMPORTANT!
 # The following click-ops step must be taken to allow Release Please to make changes to
-# the `UptimeMonitor` repo.
+# the `UptimeWorker` repo.
 # 1. Create a Personal Access Token (PAT) with the following permissions:
 #    ```text
 #    contents: read & write
 #    metadata: read
 #    pull-requests: read & write
 #    ```
-# 2. Use the PAT to populate a GitHub Actions secret called `UPTIMEMONITOR_RELEASE_PLEASE_TOKEN`
-#    (under `github.com/albertomh/UptimeMonitor/settings/secrets/actions`).
+# 2. Use the PAT to populate a GitHub Actions secret called `UPTIMEWORKER_RELEASE_PLEASE_TOKEN`
+#    (under `github.com/albertomh/UptimeWorker/settings/secrets/actions`).
 
 name: release-please
 
@@ -35,7 +35,7 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.UPTIMEMONITOR_RELEASE_PLEASE_TOKEN }}
+          token: ${{ secrets.UPTIMEWORKER_RELEASE_PLEASE_TOKEN }}
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
       # Update pnpm-lock.yaml only if release-please created or updated a Pull Request.

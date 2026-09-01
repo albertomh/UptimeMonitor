@@ -275,7 +275,7 @@ async function sendInitialEmail(
     env: Env,
     result: HealthCheckResult,
 ): Promise<void> {
-    const subject = `[${displayName(env)}] UptimeMonitor online`;
+    const subject = `[${displayName(env)}] UptimeWorker online`;
     const htmlBody = `
 <table style="border-collapse:collapse;font-family:monospace;font-size:12px;">
   <tr>
@@ -368,7 +368,7 @@ async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
     const targets = getTargetsForMinute(env, new Date(event.scheduledTime));
     if (targets.length === 0) return;
 
-    const userAgent = `${displayName(env)}-UptimeMonitor`;
+    const userAgent = `${displayName(env)}-UptimeWorker`;
     const results = await Promise.all(
         targets.map((t) => performHealthCheck(t, userAgent)),
     );

@@ -17,8 +17,3 @@ output "status_hostname" {
   description = "Hostname where the status dashboard is routed."
   value       = var.enabled ? "${var.status_subdomain}.${var.domain_name}" : null
 }
-
-output "workers_route_pattern" {
-  description = "Workers route pattern for the status dashboard."
-  value       = try(cloudflare_workers_route.this[0].pattern, null)
-}

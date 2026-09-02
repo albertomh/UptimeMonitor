@@ -12,9 +12,72 @@ description: 'Run all pre-commit hooks against the codebase'
 runs:
   using: 'composite'
   steps:
-    # global shared state: modifies `env` inside this action AND outside in the caller.
-    - run: |
-        # Skip hook since it causes issues when merging PRs, and already enforced by GitHub config.
-        echo "SKIP=no-commit-to-branch" >> $GITHUB_ENV
+    - name: Detect OpenTofu changes
+      id: opentofu-check
       shell: bash
+      run: |
+        set -euo pipefail
+
+        OPENTOFU_CHANGED=true
+        BASE_REF=""
+
+        if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+          BASE_REF="origin/$GITHUB_BASE_REF"
+        elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
+            BASE_REF="origin/${{ github.event.repository.default_branch }}"
+          else
+            BASE_REF="${{ github.event.before }}"
+          fi
+        fi
+
+        echo "Comparing OpenTofu inputs against base: $BASE_REF"
+
+        if [ -n "$BASE_REF" ] && git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+          if ! git diff --name-only "$BASE_REF" HEAD \
+            | grep -Eq '^(\.terraform\.lock\.hcl|(main|outputs|variables|versions)\.tf|dist/index\.js|src/db/schema\.sql)$'; then
+            echo "No OpenTofu module changes detected. Skipping Terraform hooks."
+            OPENTOFU_CHANGED=false
+          fi
+        else
+          echo "Could not find valid base commit ($BASE_REF). Defaulting to OPENTOFU_CHANGED=true."
+        fi
+
+        echo "changed=$OPENTOFU_CHANGED" >> "$GITHUB_OUTPUT"
+
+    - name: Set up OpenTofu
+      if: steps.opentofu-check.outputs.changed == 'true'
+      uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
+      with:
+        tofu_version: 1.12.6
+
+    - name: Set up TFLint
+      if: steps.opentofu-check.outputs.changed == 'true'
+      uses: terraform-linters/setup-tflint@c750028ac0f3831886a261f96da68ab58a92e7ec # v6
+      with:
+        tflint_version: v0.64.0
+
+    - name: Set up Trivy
+      if: steps.opentofu-check.outputs.changed == 'true'
+      uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # main, 2026-09-02
+      with:
+        version: v0.74.0
+
+    - name: Configure prek skip list
+      id: configure-skip
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # Skip hook since it causes issues when merging PRs, and already enforced by GitHub config.
+        SKIP_LIST="no-commit-to-branch"
+
+        if [ "${{ steps.opentofu-check.outputs.changed }}" = "false" ]; then
+          SKIP_LIST="$SKIP_LIST,terraform_fmt,terraform_validate,terraform_tflint,terraform_trivy"
+        fi
+
+        echo "skip=$SKIP_LIST" >> "$GITHUB_OUTPUT"
+
     - uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+      env:
+        SKIP: ${{ steps.configure-skip.outputs.skip }}

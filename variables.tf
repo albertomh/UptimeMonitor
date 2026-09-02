@@ -19,6 +19,12 @@ variable "cloudflare_zone_id" {
   description = "Cloudflare zone ID for the domain the status page is served on."
 }
 
+variable "cloudflare_api_token" {
+  type        = string
+  sensitive   = true
+  description = "Cloudflare API token used to bootstrap the D1 schema."
+}
+
 variable "project_name" {
   type        = string
   description = "Slug used to name the Worker script and D1 database (e.g. \"foo\" yields \"foo-uptime\")."

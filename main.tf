@@ -11,6 +11,10 @@ resource "cloudflare_d1_database" "this" {
 
   account_id = var.cloudflare_account_id
   name       = local.resource_name
+
+  read_replication = {
+    mode = "disabled"
+  }
 }
 
 resource "terraform_data" "schema" {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
-const schema = readFileSync("schema.sql", "utf8");
+const schema = readFileSync("src/db/schema.sql", "utf8");
 
 export default defineConfig({
     plugins: [

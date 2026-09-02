@@ -7,7 +7,7 @@ const schema = readFileSync("src/db/schema.sql", "utf8");
 export default defineConfig({
     plugins: [
         cloudflareTest({
-            wrangler: { configPath: "./wrangler.jsonc" },
+            wrangler: { configPath: "./.config/wrangler.jsonc" },
             miniflare: {
                 bindings: {
                     TEST_SCHEMA: schema,

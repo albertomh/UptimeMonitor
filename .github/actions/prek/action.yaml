@@ -35,7 +35,7 @@ runs:
 
         if [ -n "$BASE_REF" ] && git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
           if ! git diff --name-only "$BASE_REF" HEAD \
-            | grep -Eq '^(\.terraform\.lock\.hcl|(main|outputs|variables|versions)\.tf|dist/index\.js|src/db/schema\.sql)$'; then
+            | grep -Eq '^(\.terraform\.lock\.hcl|(main|outputs|variables|versions)\.tf|dist/index\.js|src/(db/schema\.sql|worker-configuration\.d\.ts))$'; then
             echo "No OpenTofu module changes detected. Skipping Terraform hooks."
             OPENTOFU_CHANGED=false
           fi

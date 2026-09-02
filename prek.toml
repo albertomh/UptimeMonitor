@@ -25,14 +25,18 @@ rev = "v0.23.2"
 hooks = [
     { id = "markdownlint-cli2", args = [
         "--config",
-        ".markdownlint-cli2.yaml",
+        ".config/markdownlint-cli2.yaml",
     ], language_version = "26.5.0" },
 ]
 
 [[repos]]
 repo = "https://github.com/crate-ci/typos"
 rev = "v1.49.0"
-hooks = [{ id = "typos", args = ["--force-exclude"] }]
+hooks = [{ id = "typos", args = [
+    "--force-exclude",
+    "--config",
+    ".config/typos.toml",
+] }]
 
 [[repos]]
 repo = "https://github.com/alessandrojcm/commitlint-pre-commit-hook"
@@ -40,6 +44,9 @@ rev = "v9.26.0"
 hooks = [
     { id = "commitlint", stages = [
         "commit-msg",
+    ], args = [
+        "--config",
+        ".config/commitlintrc.ts",
     ], additional_dependencies = [
         "@commitlint/config-conventional",
     ] },

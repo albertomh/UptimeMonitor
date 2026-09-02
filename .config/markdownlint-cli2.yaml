@@ -15,4 +15,4 @@ fix: true
 
 ignores:
   # on account of this being generated automatically by 'Release Please'
-  - "CHANGELOG.md"
+  - "docs/CHANGELOG.md"

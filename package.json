@@ -4,14 +4,14 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "wrangler dev --local --host src/index.ts --test-scheduled",
-        "test": "vitest run",
-        "deploy": "wrangler deploy src/index.ts",
+        "dev": "wrangler dev --config .config/wrangler.jsonc --local --host src/index.ts --test-scheduled",
+        "test": "vitest run --config .config/vitest.config.ts",
+        "deploy": "wrangler deploy --config .config/wrangler.jsonc src/index.ts",
         "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=browser --format=esm --minify --loader:.txt=text",
-        "d1:local:init": "wrangler d1 execute DB --local --file=src/db/schema.sql",
-        "d1:local:seed": "wrangler d1 execute DB --local --file=src/db/seed.sql",
-        "d1:local:reset": "rm -rf .wrangler/state && wrangler d1 execute DB --local --file=src/db/schema.sql && wrangler d1 execute DB --local --file=src/db/seed.sql",
-        "types": "wrangler types"
+        "d1:local:init": "wrangler d1 execute DB --config .config/wrangler.jsonc --local --file=src/db/schema.sql",
+        "d1:local:seed": "wrangler d1 execute DB --config .config/wrangler.jsonc --local --file=src/db/seed.sql",
+        "d1:local:reset": "rm -rf .wrangler/state && wrangler d1 execute DB --config .config/wrangler.jsonc --local --file=src/db/schema.sql && wrangler d1 execute DB --config .config/wrangler.jsonc --local --file=src/db/seed.sql",
+        "types": "wrangler types --config .config/wrangler.jsonc src/worker-configuration.d.ts"
     },
     "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.22.0",

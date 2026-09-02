@@ -3,7 +3,9 @@
     "changelog-type": "default",
     "include-v-in-tag": false,
     "packages": {
-        ".": {}
+        ".": {
+            "changelog-path": "docs/CHANGELOG.md"
+        }
     },
     "plugins": ["sentence-case"],
     "release-type": "node"

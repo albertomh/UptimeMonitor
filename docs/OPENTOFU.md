@@ -20,6 +20,7 @@ module "uptime_monitor" {
 
   cloudflare_account_id = var.cloudflare_account_id
   cloudflare_zone_id    = var.cloudflare_zone_id
+  cloudflare_api_token  = var.cloudflare_api_token
 
   project_name         = "myproject"
   project_display_name = "MyProject"
@@ -41,9 +42,8 @@ module "uptime_monitor" {
 }
 ```
 
-Configure the Cloudflare provider in the calling project. The schema bootstrap
-also expects `CLOUDFLARE_API_TOKEN` to be present in the environment running
-`tofu apply`.
+Configure the Cloudflare provider in the calling project. The module reuses
+`cloudflare_api_token` for the schema bootstrap step.
 
 ```hcl
 terraform {

@@ -22,6 +22,10 @@ resource "terraform_data" "schema" {
   ]
 
   provisioner "local-exec" {
+    environment = {
+      CLOUDFLARE_API_TOKEN = var.cloudflare_api_token
+    }
+
     interpreter = ["/bin/sh", "-c"]
     command     = <<EOT
 set -eu

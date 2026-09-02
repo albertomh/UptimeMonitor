@@ -11,7 +11,13 @@
 
 A serverless uptime monitoring tool, for deployment on Cloudflare Workers.
 
-Simple interface showing health over last 12 hours and email alerts sent on state changes (down / recovered).
+Features:
+
+- A simple web interface showing health over the last 12 hours
+- Track multiple environments (test / live)
+- Customisable cron expression: ping servers up to every minute
+- Email alerts sent on state changes (down / recovered)
+- An OpenTofu module to quickly deploy via IaC
 
 <!-- markdownlint-disable MD033 no-inline-html -->
 <p align="center">
@@ -40,6 +46,18 @@ pnpm dev
 Navigate to `http://localhost:8787` to see UptimeWorker running locally.
 
 Manually trigger the scheduled heartbeat by navigating to: `http://localhost:8787/__scheduled?cron=*+*+*+*+*`
+
+## Deploy
+
+UptimeWorker is ready to be deployed via OpenTofu / Terraform:
+
+```hcl
+module "uptime_monitor" {
+  source = "git::https://github.com/albertomh/UptimeWorker.git?ref=v1.0.0"
+  ...
+```
+
+See full details of the Infrastructure-as-Code setup in [OPENTOFU.md](./docs/OPENTOFU.md)
 
 ## Email alerts
 

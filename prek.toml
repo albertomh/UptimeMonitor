@@ -50,7 +50,7 @@ hooks = [
     { id = "biome-check", exclude = { glob = [
         "**/mvp.css",
         "**/worker-configuration.d.ts",
-        "_infra/UptimeWorker/dist/**",
+        "dist/**",
     ] } },
 ]
 repo = "https://github.com/biomejs/pre-commit"
@@ -68,14 +68,14 @@ hooks = [
 repo = "https://github.com/antonbabenko/pre-commit-terraform"
 rev = "v1.108.1"
 hooks = [
-    { id = "terraform_fmt", files = "^_infra/", args = [
+    { id = "terraform_fmt", files = "^(main|variables|outputs|versions)\\.tf$", args = [
         "--hook-config=--tf-path=tofu",
     ] },
-    { id = "terraform_validate", files = "^_infra/", args = [
+    { id = "terraform_validate", files = "^(main|variables|outputs|versions)\\.tf$", args = [
         "--hook-config=--tf-path=tofu",
         "--hook-config=--tf-init-args=-backend=false",
         "--hook-config=--tf-init-args=-reconfigure",
     ] },
-    { id = "terraform_tflint", files = "^_infra/" },
-    { id = "terraform_trivy", files = "^_infra/" },
+    { id = "terraform_tflint", files = "^(main|variables|outputs|versions)\\.tf$" },
+    { id = "terraform_trivy", files = "^(main|variables|outputs|versions)\\.tf$" },
 ]

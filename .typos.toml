@@ -11,4 +11,9 @@ extend-ignore-re = [
 ]
 
 [files]
-extend-exclude = ["CHANGELOG.md", "worker-configuration.d.ts", "src/vendor/**"]
+extend-exclude = [
+  "CHANGELOG.md",
+  "worker-configuration.d.ts",
+  "src/vendor/**",
+  "dist/**",
+]

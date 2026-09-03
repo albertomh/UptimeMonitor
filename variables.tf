@@ -32,7 +32,7 @@ variable "project_name" {
 
 variable "project_display_name" {
   type        = string
-  description = "Human-readable project name shown on the dashboard and in alert emails (PROJECT_DISPLAY_NAME binding)."
+  description = "Human-readable project name shown on the status page and in alert emails (PROJECT_DISPLAY_NAME binding)."
 }
 
 variable "domain_name" {
@@ -57,12 +57,12 @@ variable "targets" {
 
 variable "frontend_allowed_countries" {
   type        = list(string)
-  description = "Two-letter country codes allowed to access the status dashboard."
+  description = "Two-letter country codes allowed to access the status page."
 }
 
 variable "cron_schedules" {
   type        = list(string)
-  description = "Cron expressions that fire the Worker's scheduled handler. The Worker decides which targets to check per invocation, so this only needs to be as frequent as the tightest target cadence."
+  description = "Cron expressions that fire the Worker's scheduled handler. The Worker decides which targets to check per invocation, so run it as often as your shortest interval target (e.g. every minute)."
   default     = ["* * * * *"]
 }
 

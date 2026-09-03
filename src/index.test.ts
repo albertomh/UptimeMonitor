@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env, MonitorTarget } from "./index";
 import {
+    getScheduledDate,
     getTargetsForMinute,
     isMonitorTarget,
     parseCronMinuteInterval,
@@ -51,6 +52,32 @@ describe("parseCronMinuteInterval", () => {
     it.each(["0 * * * *", "5 * * * *", "bad"])("returns null for %s", (cron) =>
         expect(parseCronMinuteInterval(cron)).toBeNull(),
     );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getScheduledDate
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("getScheduledDate", () => {
+    it("uses scheduledTime from the scheduled controller", () => {
+        const controller = {
+            scheduledTime: Date.parse("2024-01-01T00:05:00Z"),
+        } as ScheduledController;
+
+        expect(getScheduledDate(controller).toISOString()).toBe(
+            "2024-01-01T00:05:00.000Z",
+        );
+    });
+
+    it("falls back to Date.now when scheduledTime is missing", () => {
+        vi.setSystemTime(new Date("2024-01-01T00:07:00Z"));
+
+        const controller = {} as ScheduledController;
+
+        expect(getScheduledDate(controller).toISOString()).toBe(
+            "2024-01-01T00:07:00.000Z",
+        );
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -419,7 +446,7 @@ describe("fetch handler", () => {
         expect(response.status).toBe(200);
     });
 
-    it("escapes stored environment names in dashboard HTML", async () => {
+    it("escapes stored environment names in status page HTML", async () => {
         const maliciousEnv = '<script>alert("dash")</script>';
         await env.DB.prepare(
             `INSERT INTO healthcheck

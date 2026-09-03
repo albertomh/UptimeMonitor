@@ -8,6 +8,7 @@
 [![prek](https://img.shields.io/badge/prek-CC5A23?logo=prek&logoColor=FFFFFF)](https://github.com/j178/prek)
 [![Biome](https://img.shields.io/badge/Biome-FFFFFF?logo=biome&logoColor=60A5FA)](https://github.com/biomejs/biome)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F48120?logo=cloudflare&logoColor=ffffff)](https://workers.cloudflare.com/)
+[![OpenTofu](https://img.shields.io/badge/OpenTofu-0C192B?logo=opentofu&logoColor=FFDA18)](https://opentofu.org/docs/)
 
 A serverless uptime monitoring tool, for deployment on Cloudflare Workers.
 
@@ -18,6 +19,7 @@ Features:
 - Customisable cron expression: ping servers up to every minute
 - Email alerts sent on state changes (down / recovered)
 - An OpenTofu module to quickly deploy via IaC
+- Geofence requests to the status page per country
 
 <!-- markdownlint-disable MD033 no-inline-html -->
 <p align="center">

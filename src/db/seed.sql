@@ -1,5 +1,5 @@
--- Seed data for the dashboard.
--- Uses SQLite's current time so all rows remain inside the dashboard's 12h window.
+-- Seed data for the status page.
+-- Uses SQLite's current time so all rows remain inside the status page's 12h window.
 
 -- live: one check per minute for the last 12 hours, with several failure spikes.
 INSERT INTO healthcheck (

@@ -14,6 +14,6 @@ output "d1_database_name" {
 }
 
 output "status_hostname" {
-  description = "Hostname where the status dashboard is routed."
+  description = "Hostname where the status page is routed."
   value       = var.enabled ? "${var.status_subdomain}.${var.domain_name}" : null
 }

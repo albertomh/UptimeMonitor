@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/albertomh/UptimeWorker/compare/1.1.0...1.2.0) (2026-09-03)
+
+
+### Features
+
+* Opentofu module for deployment to Cloudflare ([#24](https://github.com/albertomh/UptimeWorker/issues/24)) ([1058e55](https://github.com/albertomh/UptimeWorker/commit/1058e553311853f660402ceb4e5f0b0c6fba04c5))
+
+
+### Bug Fixes
+
+* Define custom status subdomain, not just worker route ([#29](https://github.com/albertomh/UptimeWorker/issues/29)) ([9d6deec](https://github.com/albertomh/UptimeWorker/commit/9d6deec64a72aeb707682baf0ce033f4c0e8b7a5))
+* Explicitly disable D1 read replication ([#28](https://github.com/albertomh/UptimeWorker/issues/28)) ([42dc5c6](https://github.com/albertomh/UptimeWorker/commit/42dc5c6b67a9bfc524ae58afa10bc144479c9403))
+* Pass Cloudflare token to schema bootstrap ([#27](https://github.com/albertomh/UptimeWorker/issues/27)) ([ec04079](https://github.com/albertomh/UptimeWorker/commit/ec04079cafb93251d09445159c19defdae6bdd09))
+* Use scheduled controller time for cron checks ([#32](https://github.com/albertomh/UptimeWorker/issues/32)) ([b045d88](https://github.com/albertomh/UptimeWorker/commit/b045d88eb03efa086568b05427dd489bfdfdf08d))
+
 ## [1.1.0](https://github.com/albertomh/UptimeWorker/compare/uptime-worker-1.0.0...uptime-worker-1.1.0) (2026-09-01)
 
 

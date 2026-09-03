@@ -6,7 +6,7 @@ locals {
   schema_sql                 = file(local.schema_path)
 }
 
-resource "cloudflare_d1_database" "this" {
+resource "cloudflare_d1_database" "database" {
   count = var.enabled ? 1 : 0
 
   account_id = var.cloudflare_account_id
@@ -21,7 +21,7 @@ resource "terraform_data" "schema" {
   count = var.enabled ? 1 : 0
 
   triggers_replace = [
-    cloudflare_d1_database.this[0].id,
+    cloudflare_d1_database.database[0].id,
     filesha256(local.schema_path),
   ]
 
@@ -48,7 +48,7 @@ JSON
 
 curl -fsS \
   -X POST \
-  "https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/d1/database/${cloudflare_d1_database.this[0].id}/query" \
+  "https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/d1/database/${cloudflare_d1_database.database[0].id}/query" \
   -H "Authorization: Bearer $${CLOUDFLARE_API_TOKEN}" \
   -H "Content-Type: application/json" \
   --data "@$${payload}" \
@@ -57,7 +57,7 @@ EOT
   }
 }
 
-resource "cloudflare_workers_script" "this" {
+resource "cloudflare_workers_script" "worker" {
   count = var.enabled ? 1 : 0
 
   account_id         = var.cloudflare_account_id
@@ -71,7 +71,7 @@ resource "cloudflare_workers_script" "this" {
     {
       name        = "DB"
       type        = "d1"
-      database_id = cloudflare_d1_database.this[0].id
+      database_id = cloudflare_d1_database.database[0].id
     },
     {
       name = "PROJECT_DISPLAY_NAME"
@@ -111,11 +111,11 @@ resource "cloudflare_workers_script" "this" {
   ]
 }
 
-resource "cloudflare_workers_cron_trigger" "this" {
+resource "cloudflare_workers_cron_trigger" "schedule" {
   count = var.enabled ? 1 : 0
 
   account_id  = var.cloudflare_account_id
-  script_name = cloudflare_workers_script.this[0].script_name
+  script_name = cloudflare_workers_script.worker[0].script_name
 
   # Cloudflare API limitation: cron triggers are create/update only and cannot
   # be deleted via Terraform. A destroy can leave orphaned schedules behind in
@@ -125,11 +125,11 @@ resource "cloudflare_workers_cron_trigger" "this" {
   depends_on = [terraform_data.schema]
 }
 
-resource "cloudflare_workers_custom_domain" "this" {
+resource "cloudflare_workers_custom_domain" "status" {
   count = var.enabled ? 1 : 0
 
   account_id = var.cloudflare_account_id
   hostname   = local.status_hostname
-  service    = cloudflare_workers_script.this[0].script_name
+  service    = cloudflare_workers_script.worker[0].script_name
   zone_id    = var.cloudflare_zone_id
 }

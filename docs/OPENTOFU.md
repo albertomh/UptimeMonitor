@@ -6,7 +6,7 @@ This module deploys UptimeWorker to Cloudflare:
 - the bundled Worker script from `dist/index.js`
 - Worker bindings for targets, dashboard geofencing, and Mailtrap alerts
 - a scheduled Worker cron trigger
-- a Workers route for `status_subdomain.domain_name`
+- a Workers custom domain for `status_subdomain.domain_name`
 - a D1 schema bootstrap step using Cloudflare's D1 query API
 
 ## Usage

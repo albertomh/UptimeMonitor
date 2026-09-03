@@ -125,10 +125,11 @@ resource "cloudflare_workers_cron_trigger" "this" {
   depends_on = [terraform_data.schema]
 }
 
-resource "cloudflare_workers_route" "this" {
+resource "cloudflare_workers_custom_domain" "this" {
   count = var.enabled ? 1 : 0
 
-  zone_id = var.cloudflare_zone_id
-  pattern = "${local.status_hostname}/*"
-  script  = cloudflare_workers_script.this[0].id
+  account_id = var.cloudflare_account_id
+  hostname   = local.status_hostname
+  service    = cloudflare_workers_script.this[0].script_name
+  zone_id    = var.cloudflare_zone_id
 }

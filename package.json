@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "wrangler dev --config .config/wrangler.jsonc --local --host src/index.ts --test-scheduled",
         "test": "vitest run --config .config/vitest.config.ts",
+        "tofu:test": "tofu init -backend=false -reconfigure && tofu test -test-directory=tofutests",
         "deploy": "wrangler deploy --config .config/wrangler.jsonc src/index.ts",
         "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=browser --format=esm --minify --loader:.txt=text",
         "d1:local:init": "wrangler d1 execute DB --config .config/wrangler.jsonc --local --file=src/db/schema.sql",

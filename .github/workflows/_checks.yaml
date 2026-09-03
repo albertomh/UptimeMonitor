@@ -34,3 +34,14 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+
+  opentofu_test:
+    runs-on: ubuntu-26.04
+    needs: pre_commit
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
+        with:
+          tofu_version: 1.12.6
+      - run: tofu init -backend=false -reconfigure
+      - run: tofu test -test-directory=tofutests

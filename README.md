@@ -76,6 +76,7 @@ Run tests locally with:
 
 ```sh
 pnpm test
+pnpm tofu:test
 ```
 
 These also run in CI for every branch and merge commit.

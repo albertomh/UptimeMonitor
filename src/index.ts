@@ -9,7 +9,7 @@ import chartJsSource from "./vendor/chart.umd.min.js.txt";
 export interface MonitorTarget {
     project_env: string;
     url: string;
-    cron: string; // only checked when ScheduledEvent.cron matches
+    cron: string; // only checked when the scheduled minute matches
 }
 
 export interface HealthCheckResult {
@@ -39,7 +39,7 @@ interface DbHealthCheck {
 
 export interface Env {
     DB: D1Database;
-    // human-readable project name for emails/dashboard; injected by OpenTofu
+    // human-readable project name for emails & status page; injected by OpenTofu
     PROJECT_DISPLAY_NAME: string;
     TARGETS_JSON: string;
 
@@ -99,6 +99,13 @@ export function getTargetsForMinute(env: Env, now: Date): MonitorTarget[] {
     } catch {
         return [];
     }
+}
+
+export function getScheduledDate(controller: ScheduledController): Date {
+    const scheduledTime = Number(controller.scheduledTime);
+    return new Date(
+        Number.isFinite(scheduledTime) ? scheduledTime : Date.now(),
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -373,8 +380,11 @@ export async function sendAlertEmail(
 // Scheduled handler
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function runChecks(event: ScheduledEvent, env: Env): Promise<void> {
-    const targets = getTargetsForMinute(env, new Date(event.scheduledTime));
+async function runChecks(
+    controller: ScheduledController,
+    env: Env,
+): Promise<void> {
+    const targets = getTargetsForMinute(env, getScheduledDate(controller));
     if (targets.length === 0) return;
 
     const userAgent = `${displayName(env)}-UptimeWorker`;
@@ -791,11 +801,11 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
 
 export default {
     async scheduled(
-        event: ScheduledEvent,
+        controller: ScheduledController,
         env: Env,
         _ctx: ExecutionContext,
     ): Promise<void> {
-        await runChecks(event, env);
+        await runChecks(controller, env);
     },
 
     async fetch(

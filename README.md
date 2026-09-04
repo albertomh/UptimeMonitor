@@ -10,7 +10,7 @@
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F48120?logo=cloudflare&logoColor=ffffff)](https://workers.cloudflare.com/)
 [![OpenTofu](https://img.shields.io/badge/OpenTofu-0C192B?logo=opentofu&logoColor=FFDA18)](https://opentofu.org/docs/)
 
-A serverless uptime monitoring tool, for deployment on Cloudflare Workers.
+A serverless uptime monitoring tool, to self-host on Cloudflare Workers.
 
 Features:
 
